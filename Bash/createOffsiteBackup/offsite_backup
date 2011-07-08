@@ -5,7 +5,7 @@
 ## Action command: /usr/local/sbin/offsite_backup
 ## Vendor and product ID's from lsusb
 #
-#ACTION=="add", KERNEL=="sd*", USB=="usb", ATTRS{idVendor}=="04e8", ATTRS{idProduct}=="6012", SYMLINK+="usb-backup", RUN+="/usr/local/sbin/offsite_backup", OPTIONS+="last_rule"
+#ACTION=="add", KERNEL=="sd*1", BUS=="usb", ATTRS{idVendor}=="04e8", ATTRS{idProduct}=="6012", SYMLINK+="usb-backup", RUN+="/usr/local/sbin/offsite_backup", OPTIONS+="last_rule"
 
 MAILTO="root@localhost"
 BACKUPDIR="/home/kayapo"
