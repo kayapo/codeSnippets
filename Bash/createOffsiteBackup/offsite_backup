@@ -1,0 +1,48 @@
+#!/bin/bash
+# add this lines to /etc/udev.d/85-offsite-backup-to-usb-disk.rules
+#
+## Action to automount USB backup disk
+## Action command: /usr/local/sbin/offsite_backup
+## Vendor and product ID's from lsusb
+#
+#ACTION=="add", KERNEL=="sd*", USB=="usb", ATTRS{idVendor}=="04e8", ATTRS{idProduct}=="6012", SYMLINK+="usb-backup", RUN+="/usr/local/sbin/offsite_backup", OPTIONS+="last_rule"
+
+MAILTO="root@localhost"
+BACKUPDIR="/home/kayapo"
+DISKMOUNTPOINT="/mnt/usb-backup"
+START="Start time: `date -R`"
+
+# wee send a log line to syslog
+logger -t "offsite-backup" -p syslog.info "backup automaticly started"
+
+# If the udev correctly runs you creats a symlink in /dev/usb-backup
+if [ -e "/dev/usb-backup" ];then
+  # Checks the disk mounting dir and after check wee create dir if not exists
+  [ -d "${DISKMOUNTPOINT}" ] || mkdir -p "/mnt/usb-backup"
+
+  # Mounting the backup device
+  mount /dev/usb-backup ${DISKMOUNTPOINT} -t ntfs || exit 1
+
+  # Create target of backup if not exists
+  [ -d "${DISKMOUNTPOINT}${BACKUPDIR}" ] || mkdir -p "${DISKMOUNTPOINT}${BACKUPDIR}"
+
+  # Syncing r ;)
+  RSYNCOUT="`rsync -aSWuh --stats --copy-unsafe-links --no-xattrs --no-owner --no-group "${BACKUPDIR}/" "${DISKMOUNTPOINT}${BACKUPDIR}" 2>&1`"
+else
+  # Oh my goth udev is wrong! Wee send logmessage
+  logger -t "offsite-backup" -p syslog.info "I receave a system failure: udev don't creates a sysmlink for backup disk!" 
+  logger -t "offsite-backup" -p syslog.info "Please contact your system administrator or helpdesk!"
+
+  # After exit with error!
+  exit 1
+fi
+
+END="End time:   `date -R`"
+RSYNCOUT="
+${START}
+${END}
+
+${RSYNCOUT}"
+umount ${DISKMOUNTPOINT}
+echo "${RSYNCOUT}" | mailx -s "Backup report from `hostname -f` @ `date -R`" ${MAILTO}
+#echo "${RSYNCOUT}" > /tmp/usb-backup.log
